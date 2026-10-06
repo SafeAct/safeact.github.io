@@ -800,7 +800,7 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
     const c = document.getElementById("paper"), ctx = c.getContext("2d");
     const COLORS = ["#7A4FB8", "#C8402F", "#2F63C8", "#13877F", "#C87A12"];
     const BAD = "#C2372B", GROUT = "#F7F8FA", P = 16, TS = 13.5, TILE = 88 * P;
-    const NEUTRAL = ["#ECEEF2", "#E9ECF0", "#EFF1F4", "#E6E9EE", "#F0F2F5", "#EBEDF1"];
+    const NEUTRAL = ["#EDEFF2", "#EBEDF1", "#EFF1F4", "#E9ECEF", "#F0F2F4", "#ECEEF2"];
     const still = window.matchMedia("(prefers-reduced-motion: reduce)");
     const off = document.createElement("canvas"), octx = off.getContext("2d");
     let w = 0, h = 0, motifs = [], raf = 0;
@@ -835,8 +835,8 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
           for (let s = 0; s <= 60; s++) {
             const [px, py] = bez(p, s / 60), cx = Math.floor(px / P), cy = Math.floor(py / P), key = cx + "," + cy;
             if (key === last) continue; last = key; step++;
-            if (k === bad) { if (step % 3 !== 0) paint.set(key, mix(BAD, 0.42 * f)); continue; }
-            paint.set(key, mix(col, 0.34 * f)); path.push([cx, cy]);
+            if (k === bad) { if (step % 3 !== 0) paint.set(key, mix(BAD, 0.52 * f)); continue; }
+            paint.set(key, mix(col, 0.46 * f)); path.push([cx, cy]);
           }
         });
         pts.forEach(([px, py, k]) => {
