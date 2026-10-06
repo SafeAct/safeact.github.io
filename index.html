@@ -910,13 +910,18 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
         });
       });
       // calm band behind the content column so body text never sits on busy strokes
-      const fx = v => Math.min(1, Math.max(0, v / w)), k = col0 > 220 ? 0.78 : col0 > 120 ? 0.66 : 0.55, calm = `rgba(244,245,247,${k})`;
-      const band = o.createLinearGradient(0, 0, w, 0);
+      // (light and with long eased edges, so the column and the margins read as one painting)
+      const fx = v => Math.min(1, Math.max(0, v / w)), k = col0 > 220 ? 0.5 : col0 > 120 ? 0.44 : 0.38;
+      const band = o.createLinearGradient(0, 0, w, 0), RAMP = 300;
       band.addColorStop(0, "rgba(244,245,247,0)");
-      band.addColorStop(fx(col0 - 150), "rgba(244,245,247,0)");
-      band.addColorStop(fx(col0 + 30), calm);
-      band.addColorStop(fx(col1 - 30), calm);
-      band.addColorStop(fx(col1 + 150), "rgba(244,245,247,0)");
+      for (let q = 0; q <= 6; q++) {
+        const a = (k * sm(q / 6)).toFixed(3);
+        band.addColorStop(fx(col0 - RAMP * 0.75 + RAMP * q / 6), `rgba(244,245,247,${a})`);
+      }
+      for (let q = 6; q >= 0; q--) {
+        const a = (k * sm(q / 6)).toFixed(3);
+        band.addColorStop(fx(col1 + RAMP * 0.75 - RAMP * q / 6), `rgba(244,245,247,${a})`);
+      }
       band.addColorStop(1, "rgba(244,245,247,0)");
       o.fillStyle = band; o.fillRect(0, 0, w, h);
       ready[i] = true;
