@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Noto+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
-/* Layout: full-height chapters over an evidence mosaic background (tesserae with observation, action and
-   supported / unsupported link motifs in the protocol colours), one figure per chapter, a dot pager on the
+/* Layout: full-height chapters over a Monet-style impressionist background (broken-colour water with
+   water-lily evidence-to-action motifs in the protocol colours), one figure per chapter, a dot pager on the
    right and a status bar that names the current chapter. Single light theme, like the paper's figures. */
 :root {
   --bg: #F4F5F7;
@@ -790,145 +790,28 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
     return n;
   };
 
-  /* ---------- evidence mosaic background ----------
-     A tessera mosaic: neutral, slightly irregular tiles set in light grout, with evidence-to-action
-     motifs laid into it in the five protocol colours. A ring of tiles is an observation, a solid
-     block is a consequential action, an X block is a deliberate stop (V0); links are paths of
-     tinted tiles, and red broken paths are unsupported links. A glint runs along supported paths,
-     the layer drifts slowly with scroll, and motifs behind the content column are kept faint. */
-  if ((new URLSearchParams(location.search).get("bg") || "mosaic") === "mosaic") (function () {
-    const c = document.getElementById("paper"), ctx = c.getContext("2d");
-    const COLORS = ["#7A4FB8", "#C8402F", "#2F63C8", "#13877F", "#C87A12"];
-    const BAD = "#C2372B", GROUT = "#F7F8FA", P = 16, TS = 13.5, TILE = 88 * P;
-    const NEUTRAL = ["#EDEFF2", "#EBEDF1", "#EFF1F4", "#E9ECEF", "#F0F2F4", "#ECEEF2"];
-    const still = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const off = document.createElement("canvas"), octx = off.getContext("2d");
-    let w = 0, h = 0, motifs = [], raf = 0;
-
-    const SHAPES = [
-      { n: [[0, 0, "o"], [0, 64, "o"], [104, 32, "a"]], e: [[0, 2], [1, 2]] },                                   // V1
-      { n: [[0, 0, "o"], [80, 0, "a"], [160, 0, "a"], [240, 0, "a"]], e: [[0, 1], [1, 2], [2, 3]] },              // V2
-      { n: [[0, 48, "o"], [88, 0, "a"], [88, 96, "a"], [176, 48, "a"]], e: [[0, 1], [0, 2], [1, 3], [2, 3]] },    // V3
-      { n: [[0, 0, "o"], [72, 32, "o"], [144, 0, "o"], [216, 32, "x"]], e: [[0, 1], [1, 2], [2, 3]] }             // V0
-    ];
-    const hex = s => [1, 3, 5].map(i => parseInt(s.slice(i, i + 2), 16));
-    const BGC = hex("#F4F5F7");
-    const mix = (col, k) => { const a = hex(col); return `rgb(${a.map((v, i) => Math.round(v * k + BGC[i] * (1 - k))).join(",")})`; };
-    const bez = (p, t) => { const u = 1 - t; return [u*u*u*p[0] + 3*u*u*t*p[2] + 3*u*t*t*p[4] + t*t*t*p[6], u*u*u*p[1] + 3*u*u*t*p[3] + 3*u*t*t*p[5] + t*t*t*p[7]]; };
-    const curve = (a, b) => { const mx = (a[0] + b[0]) / 2; return [a[0], a[1], mx, a[1], mx, b[1], b[0], b[1]]; };
-
-    function layout() {
-      let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-      const paint = new Map();               // "cx,cy" -> colour for motif tiles
-      motifs = [];
-      const col0 = (w - Math.min(w, 1120)) / 2, col1 = w - col0, cw = 320, ch = 240;
-      for (let gx = 0; gx * cw < w + cw; gx++) for (let gy = 0; (gy + 1) * ch < TILE; gy++) {
-        if (rnd() > 0.5) continue;
-        const shape = SHAPES[Math.floor(rnd() * SHAPES.length)], col = COLORS[Math.floor(rnd() * COLORS.length)];
-        const x = gx * cw + 24 + rnd() * (cw - 290), y = gy * ch + 24 + rnd() * (ch - 140);
-        const bad = rnd() < 0.2 ? Math.floor(rnd() * shape.e.length) : -1;
-        const f = (x + 260 < col0 || x > col1) ? 1 : 0.3;
-        const pts = shape.n.map(([dx, dy, k]) => [x + dx, y + dy, k]);
-        const path = [];
-        shape.e.forEach(([i, j], k) => {
-          const p = curve(pts[i], pts[j]); let last = "", step = 0;
-          for (let s = 0; s <= 60; s++) {
-            const [px, py] = bez(p, s / 60), cx = Math.floor(px / P), cy = Math.floor(py / P), key = cx + "," + cy;
-            if (key === last) continue; last = key; step++;
-            if (k === bad) { if (step % 3 !== 0) paint.set(key, mix(BAD, 0.52 * f)); continue; }
-            paint.set(key, mix(col, 0.46 * f)); path.push([cx, cy]);
-          }
-        });
-        pts.forEach(([px, py, k]) => {
-          const cx = Math.floor(px / P), cy = Math.floor(py / P);
-          for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++) {
-            const key = (cx + ox) + "," + (cy + oy), centre = !ox && !oy, corner = ox && oy;
-            if (k === "a") paint.set(key, mix(col, (centre ? 0.85 : 0.68) * f));
-            else if (k === "x") paint.set(key, (corner || centre) ? mix(col, 0.72 * f) : mix(col, 0.12 * f));
-            else paint.set(key, centre ? GROUT : mix(col, 0.6 * f));
-          }
-        });
-        motifs.push({ col, f, path, speed: 0.00010 + rnd() * 0.00008, phase: rnd() });
-      }
-
-      // bake the static mosaic for one vertical period
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-      off.width = Math.ceil(w * dpr); off.height = TILE * dpr;
-      octx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      octx.fillStyle = GROUT; octx.fillRect(0, 0, w, TILE);
-      let s2 = 29; const r2 = () => (s2 = (s2 * 16807) % 2147483647) / 2147483647;
-      for (let cx = 0; cx * P < w; cx++) for (let cy = 0; cy * P < TILE; cy++) {
-        const key = cx + "," + cy, size = TS - r2() * 1.5, rot = (r2() - 0.5) * 0.1;
-        let fill = paint.get(key);
-        if (!fill) fill = r2() < 0.025 ? mix(COLORS[Math.floor(r2() * 5)], 0.1) : NEUTRAL[Math.floor(r2() * NEUTRAL.length)];
-        octx.save(); octx.translate(cx * P + P / 2 + (r2() - 0.5), cy * P + P / 2 + (r2() - 0.5)); octx.rotate(rot);
-        octx.fillStyle = fill; octx.fillRect(-size / 2, -size / 2, size, size); octx.restore();
-      }
-    }
-
-    function frame(time) {
-      ctx.globalAlpha = 1;
-      const shift = -((window.scrollY * 0.18) % TILE);
-      for (let k = 0; shift + k * TILE < h; k++) ctx.drawImage(off, 0, shift + k * TILE, w, TILE);
-      if (time != null) motifs.forEach(m => {
-        if (!m.path.length) return;
-        const head = Math.floor(((time * m.speed + m.phase) % 1) * m.path.length);
-        for (let tail = 0; tail < 4; tail++) {
-          const idx = head - tail; if (idx < 0) break;
-          const [cx, cy] = m.path[idx];
-          ctx.globalAlpha = (0.75 - tail * 0.18) * m.f; ctx.fillStyle = m.col;
-          for (let k = 0; shift + k * TILE < h; k++) {
-            const y = cy * P + shift + k * TILE; if (y < -P || y > h) continue;
-            ctx.fillRect(cx * P + 1.5, y + 1.5, TS - 1, TS - 1);
-          }
-        }
-      });
-      ctx.globalAlpha = 1;
-      const wash = (x, y, r, col) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col); g.addColorStop(1, "rgba(244,245,247,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); };
-      wash(0, 0, Math.max(w, h) * 0.55, "rgba(122,79,184,0.08)");
-      wash(w, h, Math.max(w, h) * 0.55, "rgba(19,135,127,0.08)");
-      // keep the reading column calm
-      const g = ctx.createRadialGradient(w / 2, h * 0.48, 0, w / 2, h * 0.48, Math.max(w, h) * 0.62);
-      g.addColorStop(0, "rgba(244,245,247,0.86)"); g.addColorStop(0.5, "rgba(244,245,247,0.4)"); g.addColorStop(1, "rgba(244,245,247,0)");
-      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-    }
-
-    function loop(time) { frame(time); raf = (!still.matches && !document.hidden) ? requestAnimationFrame(loop) : 0; }
-    function kick() { if (still.matches) frame(null); else if (!raf) raf = requestAnimationFrame(loop); }
-    function resize() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      w = window.innerWidth; h = window.innerHeight;
-      c.width = w * dpr; c.height = h * dpr; c.style.width = w + "px"; c.style.height = h + "px";
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      layout(); frame(still.matches ? null : performance.now()); kick();
-    }
-    let rt = 0;
-    resize();
-    window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(resize, 120); });
-    window.addEventListener("scroll", kick, { passive: true });
-    document.addEventListener("visibilitychange", kick);
-    still.addEventListener?.("change", kick);
-  })();
-  /* ---------- painterly backgrounds (preview with ?bg=vangogh or ?bg=monet) ----------
-     The same evidence-to-action motifs, painted instead of tiled. Van Gogh: swirling impasto
-     strokes that follow a flow field, with observations and actions as haloed stars and links as
-     brush currents. Monet: broken-colour dabs on still water, with nodes as water-lily pads and
-     links as light reflections. Baked once per resize; only the glow and glints animate. */
+  /* ---------- Monet background ----------
+     An impressionist water surface in broken-colour dabs (lilac sky light above, green water
+     below) with the evidence-to-action motifs painted into it: every node is a water-lily pad,
+     consequential actions carry a flower in their protocol colour, observations a thin ring, and
+     a deliberate stop (V0) an X. Supported links are coloured reflections with white highlights;
+     unsupported links are broken red strokes. The scene is baked once per resize; only a glint
+     drifting along each supported link animates. Motifs behind the content column stay faint. */
   (function () {
-    const style = new URLSearchParams(location.search).get("bg");
-    if (style !== "vangogh" && style !== "monet") return;
     const c = document.getElementById("paper"), ctx = c.getContext("2d");
     const COLORS = ["#7A4FB8", "#C8402F", "#2F63C8", "#13877F", "#C87A12"];
     const BAD = "#C2372B";
     const still = window.matchMedia("(prefers-reduced-motion: reduce)");
     const off = document.createElement("canvas"), o = off.getContext("2d");
-    let w = 0, h = 0, motifs = [], raf = 0, flow = null, fw = 0, fh = 0;
+    let w = 0, h = 0, motifs = [], raf = 0;
     const SHAPES = [
-      { n: [[0, 0, "o"], [0, 70, "o"], [110, 35, "a"]], e: [[0, 2], [1, 2]] },
-      { n: [[0, 0, "o"], [85, 0, "a"], [170, 0, "a"], [255, 0, "a"]], e: [[0, 1], [1, 2], [2, 3]] },
-      { n: [[0, 50, "o"], [95, 0, "a"], [95, 100, "a"], [190, 50, "a"]], e: [[0, 1], [0, 2], [1, 3], [2, 3]] },
-      { n: [[0, 0, "o"], [78, 34, "o"], [156, 0, "o"], [234, 34, "x"]], e: [[0, 1], [1, 2], [2, 3]] }
+      { n: [[0, 0, "o"], [0, 70, "o"], [110, 35, "a"]], e: [[0, 2], [1, 2]] },                                   // V1
+      { n: [[0, 0, "o"], [85, 0, "a"], [170, 0, "a"], [255, 0, "a"]], e: [[0, 1], [1, 2], [2, 3]] },              // V2
+      { n: [[0, 50, "o"], [95, 0, "a"], [95, 100, "a"], [190, 50, "a"]], e: [[0, 1], [0, 2], [1, 3], [2, 3]] },   // V3
+      { n: [[0, 0, "o"], [78, 34, "o"], [156, 0, "o"], [234, 34, "x"]], e: [[0, 1], [1, 2], [2, 3]] }             // V0
     ];
+    const PAL = [["#B3A3DA", "#C6B9E6", "#9FBBE6"], ["#8FCDC0", "#B2DDD2", "#B9D7A6"], ["#E6A7B2", "#EEC2BE", "#EBCB86"], ["#FFFFFF", "#F7EFDD", "#D5E2F4"]];
+    const PAD = ["#6FA584", "#8DBE93", "#5E9A7C", "#A3CB9C"];
     const hex = s => [1, 3, 5].map(i => parseInt(s.slice(i, i + 2), 16));
     const rgba = (col, a) => `rgba(${hex(col).join(",")},${a})`;
     const tint = (col, k, a) => `rgba(${hex(col).map(v => Math.round(v + (255 - v) * k)).join(",")},${a})`;
@@ -958,85 +841,24 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
       }
     }
 
-    // flow field on a coarse grid: gentle Starry-Night waves plus a swirl around every node
-    function buildFlow() {
-      const S = 8; fw = Math.ceil(w / S) + 1; fh = Math.ceil(h / S) + 1; flow = new Float32Array(fw * fh);
-      const vort = [];
-      motifs.forEach(m => m.pts.forEach(([x, y]) => vort.push([x, y, 46, 1])));
-      for (let i = 0; i < 6; i++) vort.push([rnd() * w, rnd() * h, 140 + rnd() * 80, rnd() < 0.5 ? 1 : -1]);
-      for (let j = 0; j < fh; j++) for (let i = 0; i < fw; i++) {
-        const x = i * S, y = j * S;
-        const a = Math.sin(y * 0.006 + noise(x * 0.0025, y * 0.0025) * 3.2) * 0.85 + (noise(x * 0.005 + 9, y * 0.005) - 0.5) * 1.4;
-        let vx = Math.cos(a), vy = Math.sin(a);
-        for (const [cx, cy, r, s] of vort) {
-          const dx = x - cx, dy = y - cy, d2 = dx * dx + dy * dy; if (d2 > 9 * r * r) continue;
-          const k = s * 3.2 * Math.exp(-d2 / (2 * r * r)) / Math.sqrt(d2 + 1);
-          vx += -dy * k; vy += dx * k;
-        }
-        flow[j * fw + i] = Math.atan2(vy, vx);
-      }
-    }
-    const angle = (x, y) => { const i = Math.max(0, Math.min(fw - 1, Math.round(x / 8))), j = Math.max(0, Math.min(fh - 1, Math.round(y / 8))); return flow[j * fw + i]; };
-
-    function stroke(x, y, steps, len, lw, color) {
-      o.lineWidth = lw; o.strokeStyle = color; o.beginPath(); o.moveTo(x, y);
-      for (let s = 0; s < steps; s++) { const a = angle(x, y); x += Math.cos(a) * len; y += Math.sin(a) * len; o.lineTo(x, y); }
-      o.stroke();
-    }
     function dab(x, y, a, len, lw, color) {
       o.lineWidth = lw; o.strokeStyle = color; o.beginPath();
       o.moveTo(x - Math.cos(a) * len / 2, y - Math.sin(a) * len / 2); o.lineTo(x + Math.cos(a) * len / 2, y + Math.sin(a) * len / 2); o.stroke();
     }
 
-    function bakeVanGogh() {
-      const g = o.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, "#E9EEF7"); g.addColorStop(0.6, "#F1F3F7"); g.addColorStop(1, "#F5F1E4");
-      o.fillStyle = g; o.fillRect(0, 0, w, h);
-      const DEEP = ["#3F63B5", "#5577C4", "#2F56A8"], LIGHT = ["#86A6DC", "#A6BEE6", "#7FB0C6", "#9CCBC0"], WARM = ["#E8C24A", "#F0D57A", "#F6E7A8", "#FFFFFF"];
-      const N = Math.floor(w * h / 95);
-      for (let i = 0; i < N; i++) {
-        const x = rnd() * w, y = rnd() * h, n = noise(x * 0.004, y * 0.004);
-        const pal = n < 0.32 ? DEEP : n < 0.66 ? LIGHT : WARM;
-        stroke(x, y, 6 + Math.floor(rnd() * 6), 3, 2.2 + rnd() * 2.6, rgba(pal[Math.floor(rnd() * pal.length)], 0.16 + rnd() * 0.18));
-      }
-      motifs.forEach(m => {
-        m.edges.forEach((p, k) => {
-          const isBad = k === m.bad;
-          for (let s = 0; s < 34; s++) {
-            if (isBad && s % 3 === 2) continue;
-            const t0 = s / 34, [x0, y0] = bez(p, t0), [x1, y1] = bez(p, t0 + 1 / 34), a = Math.atan2(y1 - y0, x1 - x0);
-            for (let r = -1; r <= 1; r++) dab(x0 - Math.sin(a) * r * 2.6, y0 + Math.cos(a) * r * 2.6, a + (rnd() - 0.5) * 0.3, 8, 2.2, isBad ? rgba(BAD, 0.45 * m.f) : tint(m.col, 0.25 + rnd() * 0.2, 0.5 * m.f));
-          }
-        });
-        m.pts.forEach(([x, y, k]) => {
-          for (let ring = 0; ring < 4; ring++) {
-            const r = 11 + ring * 6.5, n = Math.floor(r * 0.7);
-            for (let q = 0; q < n; q++) {
-              const a = q / n * 6.283 + rnd() * 0.2, px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
-              dab(px, py, a + 1.571, 7, 2.4, ring % 2 ? tint("#E5C55A", 0.3, (0.45 - ring * 0.08) * m.f) : tint(m.col, 0.2 + ring * 0.12, (0.55 - ring * 0.1) * m.f));
-            }
-          }
-          o.lineWidth = 2.4;
-          if (k === "a") { o.fillStyle = tint(m.col, 0.1, 0.85 * m.f); o.beginPath(); o.arc(x, y, 6.5, 0, 7); o.fill(); o.fillStyle = rgba("#F4D35E", 0.95 * m.f); o.beginPath(); o.arc(x, y, 3, 0, 7); o.fill(); }
-          else if (k === "x") { o.strokeStyle = rgba(m.col, 0.8 * m.f); o.beginPath(); o.moveTo(x - 5, y - 5); o.lineTo(x + 5, y + 5); o.moveTo(x + 5, y - 5); o.lineTo(x - 5, y + 5); o.stroke(); }
-          else { o.strokeStyle = rgba(m.col, 0.75 * m.f); o.beginPath(); o.arc(x, y, 5.5, 0, 7); o.stroke(); }
-        });
-      });
-    }
-
-    function bakeMonet() {
+    function bake() {
       const g = o.createLinearGradient(0, 0, 0, h);
       g.addColorStop(0, "#EFEDF6"); g.addColorStop(0.5, "#F2F4F6"); g.addColorStop(1, "#E9F2EF");
       o.fillStyle = g; o.fillRect(0, 0, w, h);
-      const PAL = [["#B3A3DA", "#C6B9E6", "#9FBBE6"], ["#8FCDC0", "#B2DDD2", "#B9D7A6"], ["#E6A7B2", "#EEC2BE", "#EBCB86"], ["#FFFFFF", "#F7EFDD", "#D5E2F4"]];
+      // water surface: broken-colour dabs, palette drifting from sky light to green water
       const N = Math.floor(w * h / 60);
       for (let i = 0; i < N; i++) {
         const x = rnd() * w, y = rnd() * h, n = Math.min(0.999, Math.max(0, noise(x * 0.0018 + 3, y * 0.0045) * 0.8 + (y / h) * 0.35 - 0.05));
-        const pal = PAL[Math.min(3, Math.floor(n * 4))];
+        const pal = PAL[Math.floor(n * 4)];
         dab(x, y, (noise(x * 0.01, y * 0.01) - 0.5) * 0.45, 10 + rnd() * 12, 3.5 + rnd() * 3.5, rgba(pal[Math.floor(rnd() * pal.length)], 0.24 + rnd() * 0.24));
       }
-      const PAD = ["#6FA584", "#8DBE93", "#5E9A7C", "#A3CB9C"];
       motifs.forEach(m => {
+        // links: coloured reflections with white highlights; unsupported links broken and red
         m.edges.forEach((p, k) => {
           const isBad = k === m.bad;
           for (let s = 0; s < 40; s++) {
@@ -1046,6 +868,7 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
             if (!isBad && s % 4 === 0) dab(x, y - 4, 0, 6, 1.8, rgba("#FFFFFF", 0.7 * m.f));
           }
         });
+        // nodes: lily pads, with a flower on actions, a ring on observations, an X on a stop
         m.pts.forEach(([x, y, k]) => {
           for (let q = 0; q < 46; q++) {
             const a = rnd() * 6.283, r = Math.sqrt(rnd());
@@ -1066,16 +889,12 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
     function frame(time) {
       ctx.globalAlpha = 1; ctx.drawImage(off, 0, 0, w, h);
       if (time != null) motifs.forEach(m => {
-        if (style === "vangogh") m.pts.forEach(([x, y], i) => {
-          const a = (0.16 + 0.1 * Math.sin(time * 0.0016 + m.phase + i)) * m.f;
-          const g = ctx.createRadialGradient(x, y, 0, x, y, 34); g.addColorStop(0, `rgba(244,211,94,${a})`); g.addColorStop(1, "rgba(244,211,94,0)");
-          ctx.fillStyle = g; ctx.fillRect(x - 34, y - 34, 68, 68);
-        });
         const good = m.edges.filter((p, k) => k !== m.bad); if (!good.length) return;
         const t = ((time * m.speed + m.phase) % 1) * good.length, [x, y] = bez(good[Math.floor(t)], t % 1);
-        ctx.globalAlpha = 0.85 * m.f; ctx.fillStyle = style === "vangogh" ? "#F4D35E" : "#FFFFFF";
-        ctx.beginPath(); ctx.ellipse(x, y, style === "vangogh" ? 3.2 : 5, style === "vangogh" ? 3.2 : 2, 0, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+        ctx.globalAlpha = 0.85 * m.f; ctx.fillStyle = "#FFFFFF";
+        ctx.beginPath(); ctx.ellipse(x, y, 5, 2, 0, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
       });
+      // keep the reading column calm
       const g = ctx.createRadialGradient(w / 2, h * 0.48, 0, w / 2, h * 0.48, Math.max(w, h) * 0.62);
       g.addColorStop(0, "rgba(244,245,247,0.86)"); g.addColorStop(0.5, "rgba(244,245,247,0.4)"); g.addColorStop(1, "rgba(244,245,247,0)");
       ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
@@ -1088,14 +907,14 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
       c.width = w * dpr; c.height = h * dpr; c.style.width = w + "px"; c.style.height = h + "px";
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const od = Math.min(dpr, 1.5); off.width = Math.ceil(w * od); off.height = Math.ceil(h * od); o.setTransform(od, 0, 0, od, 0, 0); o.lineCap = "round";
-      layout(); seed = 97;
-      if (style === "vangogh") { buildFlow(); bakeVanGogh(); } else bakeMonet();
+      layout(); seed = 97; bake();
       frame(still.matches ? null : performance.now()); kick();
     }
     let rt = 0;
     resize();
     window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(resize, 150); });
     document.addEventListener("visibilitychange", kick);
+    still.addEventListener?.("change", kick);
   })();
   /* ---------- chapters: pager + status bar ---------- */
   (function () {
