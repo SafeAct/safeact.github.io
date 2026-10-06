@@ -204,15 +204,15 @@ svg .dot:hover { stroke-width: 3.5; }
 .car-arrows button:hover { border-color: var(--ink-2); }
 
 /* ---------- gallery ---------- */
-.gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; align-items: start; }
+.gallery { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.2rem; align-items: start; }
 .thumb {
-  padding: .9rem; display: flex; flex-direction: column; gap: .6rem; min-width: 0; box-sizing: border-box;
+  padding: clamp(.6rem, 2vw, 1.2rem); display: flex; flex-direction: column; gap: .6rem; min-width: 0; box-sizing: border-box;
   background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
   box-shadow: 0 1px 2px rgba(23, 33, 58, .04), 0 8px 24px -12px rgba(23, 33, 58, .10);
 }
 .thumb:hover { border-color: #C9CFDA; }
 .thumb img { width: 100%; height: auto; background: #fff; border-radius: 6px; display: block; }
-.thumb span { font-size: .86rem; color: var(--ink-2); line-height: 1.4; }
+.thumb span { font-size: .9rem; color: var(--ink-2); line-height: 1.55; }
 .thumb b { font-family: var(--f-mono); font-size: .72rem; color: var(--muted); font-weight: 500; display: block; }
 
 /* ---------- trajectories ---------- */
