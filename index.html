@@ -9,9 +9,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Noto+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
-/* Layout: full-height chapters on graph paper, one figure per chapter, a dot pager on the right
-   and a status bar that names the current chapter. Deliberately single light theme, like the
-   paper's own white-ground figures. */
+/* Layout: full-height chapters over a faint evidence-graph background (observations, actions and
+   supported / unsupported links in the protocol colours), one figure per chapter, a dot pager on the
+   right and a status bar that names the current chapter. Single light theme, like the paper's figures. */
 :root {
   --bg: #F4F5F7;
   --grid: #E4E7EC;
@@ -790,32 +790,117 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
     return n;
   };
 
-  /* ---------- graph-paper background ---------- */
+  /* ---------- evidence-graph background ----------
+     A faint dot lattice of records with scattered evidence-to-action motifs in the five protocol
+     colours: hollow circles are observations, filled squares are consequential actions. Pulses
+     travel along supported links; a few links are dashed red (unsupported). The layer drifts
+     slowly with scroll and stays faded behind the content column. */
   (function () {
     const c = document.getElementById("paper"), ctx = c.getContext("2d");
-    const S = 56;
-    function draw() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const w = window.innerWidth, h = window.innerHeight;
-      c.width = w * dpr; c.height = h * dpr; c.style.width = w + "px"; c.style.height = h + "px";
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.fillStyle = "#F4F5F7"; ctx.fillRect(0, 0, w, h);
-      let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-      for (let x = 0; x < w; x += S) for (let y = 0; y < h; y += S) {
-        const r = rnd();
-        if (r < 0.14) { ctx.fillStyle = r < 0.05 ? "#E8EAEE" : "#EDEFF2"; ctx.fillRect(x + 1, y + 1, S - 1, S - 1); }
+    const COLORS = ["#7A4FB8", "#C8402F", "#2F63C8", "#13877F", "#C87A12"];
+    const BAD = "#C2372B", BG = "#F4F5F7", TILE = 1400, DOT = 28;
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let w = 0, h = 0, motifs = [], raf = 0;
+
+    const SHAPES = [
+      // V1: two observations support one action
+      { n: [[0, 0, "o"], [0, 46, "o"], [74, 23, "a"]], e: [[0, 2], [1, 2]] },
+      // V2: linear chain
+      { n: [[0, 0, "o"], [62, 0, "a"], [124, 0, "a"], [186, 0, "a"]], e: [[0, 1], [1, 2], [2, 3]] },
+      // V3: dependency DAG
+      { n: [[0, 30, "o"], [64, 0, "a"], [64, 60, "a"], [128, 30, "a"]], e: [[0, 1], [0, 2], [1, 3], [2, 3]] },
+      // V0: investigate, then stop
+      { n: [[0, 0, "o"], [52, 18, "o"], [104, 0, "o"], [156, 18, "x"]], e: [[0, 1], [1, 2], [2, 3]] }
+    ];
+
+    function layout() {
+      let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      motifs = [];
+      const cw = 300, ch = 230;
+      for (let gx = 0; gx * cw < w + cw; gx++) for (let gy = 0; gy * ch < TILE; gy++) {
+        if (rnd() > 0.5) continue;
+        const shape = SHAPES[Math.floor(rnd() * SHAPES.length)];
+        const col = COLORS[Math.floor(rnd() * COLORS.length)];
+        const x = gx * cw + 30 + rnd() * (cw - 230), y = gy * ch + 30 + rnd() * (ch - 100);
+        const bad = rnd() < 0.18 ? Math.floor(rnd() * shape.e.length) : -1;
+        motifs.push({ shape, col, x, y, bad, speed: 0.00012 + rnd() * 0.00010, phase: rnd() });
       }
-      ctx.strokeStyle = "#E3E6EB"; ctx.lineWidth = 1; ctx.beginPath();
-      for (let x = 0.5; x < w; x += S) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
-      for (let y = 0.5; y < h; y += S) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
-      ctx.stroke();
-      const g = ctx.createRadialGradient(w / 2, h * 0.45, 0, w / 2, h * 0.45, Math.max(w, h) * 0.6);
-      g.addColorStop(0, "rgba(244,245,247,0.85)"); g.addColorStop(1, "rgba(244,245,247,0)");
+    }
+
+    function curve(a, b) {
+      const mx = (a[0] + b[0]) / 2;
+      return [a[0], a[1], mx, a[1], mx, b[1], b[0], b[1]];
+    }
+    function bez(p, t) {
+      const u = 1 - t;
+      return [u * u * u * p[0] + 3 * u * u * t * p[2] + 3 * u * t * t * p[4] + t * t * t * p[6],
+              u * u * u * p[1] + 3 * u * u * t * p[3] + 3 * u * t * t * p[5] + t * t * t * p[7]];
+    }
+
+    function drawMotif(m, oy, time) {
+      const pts = m.shape.n.map(([dx, dy, k]) => [m.x + dx, m.y + dy + oy, k]);
+      if (pts[0][1] > h + 120 || pts[0][1] < -200) return;
+      m.shape.e.forEach(([i, j], k) => {
+        const p = curve(pts[i], pts[j]);
+        ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.bezierCurveTo(p[2], p[3], p[4], p[5], p[6], p[7]);
+        if (k === m.bad) { ctx.setLineDash([4, 4]); ctx.strokeStyle = BAD; ctx.globalAlpha = 0.5; }
+        else { ctx.setLineDash([]); ctx.strokeStyle = m.col; ctx.globalAlpha = 0.34; }
+        ctx.lineWidth = 1.3; ctx.stroke();
+        if (k === m.bad) {
+          const [cx, cy] = bez(p, 0.5); ctx.setLineDash([]); ctx.globalAlpha = 0.6; ctx.beginPath();
+          ctx.moveTo(cx - 3, cy - 3); ctx.lineTo(cx + 3, cy + 3); ctx.moveTo(cx + 3, cy - 3); ctx.lineTo(cx - 3, cy + 3); ctx.stroke();
+        }
+      });
+      ctx.setLineDash([]);
+      pts.forEach(([x, y, k]) => {
+        ctx.globalAlpha = 0.62; ctx.lineWidth = 1.4;
+        if (k === "a") { ctx.fillStyle = m.col; ctx.beginPath(); ctx.roundRect(x - 5, y - 5, 10, 10, 2.5); ctx.fill(); }
+        else if (k === "x") { ctx.strokeStyle = m.col; ctx.beginPath(); ctx.roundRect(x - 5, y - 5, 10, 10, 2.5); ctx.stroke(); }
+        else { ctx.fillStyle = BG; ctx.strokeStyle = m.col; ctx.beginPath(); ctx.arc(x, y, 4.5, 0, 7); ctx.fill(); ctx.stroke(); }
+      });
+      if (time == null) return;
+      // one pulse walks the motif's supported links in order
+      const good = m.shape.e.map((e, k) => k).filter(k => k !== m.bad);
+      if (!good.length) return;
+      const t = ((time * m.speed + m.phase) % 1) * good.length, k = good[Math.floor(t)];
+      const [i, j] = m.shape.e[k], [px, py] = bez(curve(pts[i], pts[j]), t % 1);
+      ctx.globalAlpha = 0.85; ctx.fillStyle = m.col; ctx.beginPath(); ctx.arc(px, py, 2.6, 0, 7); ctx.fill();
+    }
+
+    function frame(time) {
+      ctx.globalAlpha = 1; ctx.fillStyle = BG; ctx.fillRect(0, 0, w, h);
+      // soft protocol-coloured washes in opposite corners
+      const wash = (x, y, r, col) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col); g.addColorStop(1, "rgba(244,245,247,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); };
+      wash(0, 0, Math.max(w, h) * 0.55, "rgba(122,79,184,0.09)");
+      wash(w, h, Math.max(w, h) * 0.55, "rgba(19,135,127,0.09)");
+      const shift = -((window.scrollY * 0.18) % TILE);
+      // record lattice
+      ctx.fillStyle = "#D5DAE2"; ctx.globalAlpha = 0.9;
+      const dy = ((shift % DOT) + DOT) % DOT;
+      for (let x = DOT / 2; x < w; x += DOT) for (let y = dy; y < h; y += DOT) ctx.fillRect(x, y, 1.4, 1.4);
+      for (const oy of [shift, shift + TILE, shift + 2 * TILE]) motifs.forEach(m => drawMotif(m, oy, still.matches ? null : time));
+      // keep the reading column calm
+      ctx.globalAlpha = 1;
+      const g = ctx.createRadialGradient(w / 2, h * 0.48, 0, w / 2, h * 0.48, Math.max(w, h) * 0.62);
+      g.addColorStop(0, "rgba(244,245,247,0.88)"); g.addColorStop(0.5, "rgba(244,245,247,0.35)"); g.addColorStop(1, "rgba(244,245,247,0)");
       ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
     }
-    draw(); window.addEventListener("resize", draw);
-  })();
 
+    function loop(time) { frame(time); raf = (!still.matches && !document.hidden) ? requestAnimationFrame(loop) : 0; }
+    function kick() { if (!raf) raf = requestAnimationFrame(loop); }
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = window.innerWidth; h = window.innerHeight;
+      c.width = w * dpr; c.height = h * dpr; c.style.width = w + "px"; c.style.height = h + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      layout(); frame(performance.now()); kick();
+    }
+    resize();
+    window.addEventListener("resize", resize);
+    window.addEventListener("scroll", () => { if (still.matches) frame(null); else kick(); }, { passive: true });
+    document.addEventListener("visibilitychange", kick);
+    still.addEventListener?.("change", kick);
+  })();
   /* ---------- chapters: pager + status bar ---------- */
   (function () {
     const chapters = [...document.querySelectorAll(".chapter")];
