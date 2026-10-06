@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Noto+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
-/* Layout: full-height chapters over a Monet-style impressionist background (broken-colour water with
-   water-lily evidence-to-action motifs in the protocol colours), one figure per chapter, a dot pager on the
+/* Layout: full-height chapters over a Monet-style impressionist background (the same pond at dawn, day and
+   dusk as you scroll, with water-lily evidence-to-action motifs in the protocol colours), one figure per chapter, a dot pager on the
    right and a status bar that names the current chapter. Single light theme, like the paper's figures. */
 :root {
   --bg: #F4F5F7;
@@ -790,27 +790,36 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
   };
 
   /* ---------- Monet background ----------
-     An impressionist water surface in broken-colour dabs (lilac sky light above, green water
-     below) with the evidence-to-action motifs painted into it: every node is a water-lily pad,
+     An impressionist water surface in broken-colour dabs, painted as a Monet-style series: the
+     same pond at dawn (title), in daylight (results) and at dusk (about), cross-fading as the
+     reader scrolls. Dawn and dusk carry an "Impression, Sunrise" sun with its reflection column.
+     The evidence-to-action motifs are painted into the water: every node is a water-lily pad,
      consequential actions carry a flower in their protocol colour, observations a thin ring, and
-     a deliberate stop (V0) an X. Supported links are coloured reflections with white highlights;
-     unsupported links are broken red strokes. The scene is baked once per resize; only a glint
-     drifting along each supported link animates. Motifs behind the content column stay faint. */
+     a deliberate stop (V0) an X; supported links are coloured reflections with white highlights,
+     unsupported links broken red strokes. Each scene is baked once per resize with a calm band
+     behind the content column; only a glint drifting along each supported link animates. */
   (function () {
     const c = document.getElementById("paper"), ctx = c.getContext("2d");
     const COLORS = ["#7A4FB8", "#C8402F", "#2F63C8", "#13877F", "#C87A12"];
     const BAD = "#C2372B";
-    const still = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const off = document.createElement("canvas"), o = off.getContext("2d");
-    let w = 0, h = 0, motifs = [], raf = 0;
-    const SHAPES = [
-      { n: [[0, 0, "o"], [0, 70, "o"], [110, 35, "a"]], e: [[0, 2], [1, 2]] },                                   // V1
-      { n: [[0, 0, "o"], [85, 0, "a"], [170, 0, "a"], [255, 0, "a"]], e: [[0, 1], [1, 2], [2, 3]] },              // V2
-      { n: [[0, 50, "o"], [95, 0, "a"], [95, 100, "a"], [190, 50, "a"]], e: [[0, 1], [0, 2], [1, 3], [2, 3]] },   // V3
-      { n: [[0, 0, "o"], [78, 34, "o"], [156, 0, "o"], [234, 34, "x"]], e: [[0, 1], [1, 2], [2, 3]] }             // V0
+    const SCENES = [
+      { top: "#F1ECF6", bottom: "#EDEFF7", sky: ["#C9B8E6", "#D9CDEF", "#B9C6EC"], mid: ["#F2B9A8", "#F6CFB8", "#EFC6CF"],
+        water: ["#A8C8E8", "#BFD6EE", "#C9C2E6"], light: ["#FFFFFF", "#FBEBDD"], sun: { side: 1, y: 0.2, col: "#F08A4B" } },   // dawn
+      { top: "#EEF3F8", bottom: "#EAF3EF", sky: ["#A9C6EE", "#C4D7F2", "#B8D9E8"], mid: ["#9ED3C4", "#BCE0D3", "#C9E2B9"],
+        water: ["#86C0B2", "#A9D3C2", "#B3D4A2"], light: ["#FFFFFF", "#F4F8EC"], sun: null },                                   // day
+      { top: "#F6EEE6", bottom: "#EFEAF3", sky: ["#E8B98F", "#F0CBA2", "#E9C1B5"], mid: ["#C9A9D8", "#D8BEE3", "#E7B2BE"],
+        water: ["#9FAFD8", "#B6BEE2", "#C6B1D6"], light: ["#FFF4E0", "#FFFFFF"], sun: { side: 0, y: 0.72, col: "#E8673E" } }    // dusk
     ];
-    const PAL = [["#B3A3DA", "#C6B9E6", "#9FBBE6"], ["#8FCDC0", "#B2DDD2", "#B9D7A6"], ["#E6A7B2", "#EEC2BE", "#EBCB86"], ["#FFFFFF", "#F7EFDD", "#D5E2F4"]];
     const PAD = ["#6FA584", "#8DBE93", "#5E9A7C", "#A3CB9C"];
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const offs = SCENES.map(() => document.createElement("canvas"));
+    let o = null, w = 0, h = 0, col0 = 0, col1 = 0, motifs = [], raf = 0, ready = [false, false, false], bakeId = 0;
+    const SHAPES = [
+      { n: [[0, 0, "o"], [0, 74, "o"], [118, 37, "a"]], e: [[0, 2], [1, 2]] },                                   // V1
+      { n: [[0, 0, "o"], [90, 0, "a"], [180, 0, "a"], [270, 0, "a"]], e: [[0, 1], [1, 2], [2, 3]] },              // V2
+      { n: [[0, 52, "o"], [100, 0, "a"], [100, 104, "a"], [200, 52, "a"]], e: [[0, 1], [0, 2], [1, 3], [2, 3]] }, // V3
+      { n: [[0, 0, "o"], [82, 36, "o"], [164, 0, "o"], [246, 36, "x"]], e: [[0, 1], [1, 2], [2, 3]] }             // V0
+    ];
     const hex = s => [1, 3, 5].map(i => parseInt(s.slice(i, i + 2), 16));
     const rgba = (col, a) => `rgba(${hex(col).join(",")},${a})`;
     const tint = (col, k, a) => `rgba(${hex(col).map(v => Math.round(v + (255 - v) * k)).join(",")},${a})`;
@@ -824,18 +833,19 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
     const curve = (a, b) => { const mx = (a[0] + b[0]) / 2; return [a[0], a[1], mx, a[1], mx, b[1], b[0], b[1]]; };
     const bez = (p, t) => { const u = 1 - t; return [u*u*u*p[0] + 3*u*u*t*p[2] + 3*u*t*t*p[4] + t*t*t*p[6], u*u*u*p[1] + 3*u*u*t*p[3] + 3*u*t*t*p[5] + t*t*t*p[7]]; };
     let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const pick = a => a[Math.floor(rnd() * a.length)];
 
     function layout() {
       seed = 11; motifs = [];
-      const col0 = (w - Math.min(w, 1120)) / 2, col1 = w - col0, cw = 340, ch = 260;
+      const cw = 360, ch = 270;
       for (let gx = 0; gx * cw < w + cw; gx++) for (let gy = 0; gy * ch < h + ch; gy++) {
         if (rnd() > 0.45) continue;
-        const shape = SHAPES[Math.floor(rnd() * SHAPES.length)], col = COLORS[Math.floor(rnd() * COLORS.length)];
-        const x = gx * cw + 30 + rnd() * (cw - 300), y = gy * ch + 40 + rnd() * (ch - 160);
+        const shape = pick(SHAPES), col = pick(COLORS);
+        const x = gx * cw + 30 + rnd() * (cw - 320), y = gy * ch + 40 + rnd() * (ch - 170);
         const pts = shape.n.map(([dx, dy, k]) => [x + dx, y + dy, k]);
         const edges = shape.e.map(([i, j]) => curve(pts[i], pts[j]));
         const bad = rnd() < 0.2 ? Math.floor(rnd() * edges.length) : -1;
-        const f = (x + 270 < col0 || x > col1) ? 1 : 0.3;
+        const f = (x + 280 < col0 || x > col1) ? 1 : 0.3;
         motifs.push({ col, pts, edges, bad, f, speed: 0.00008 + rnd() * 0.00006, phase: rnd() * 6.28 });
       }
     }
@@ -845,73 +855,120 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
       o.moveTo(x - Math.cos(a) * len / 2, y - Math.sin(a) * len / 2); o.lineTo(x + Math.cos(a) * len / 2, y + Math.sin(a) * len / 2); o.stroke();
     }
 
-    function bake() {
-      const g = o.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, "#EFEDF6"); g.addColorStop(0.5, "#F2F4F6"); g.addColorStop(1, "#E9F2EF");
+    function bake(i) {
+      const S = SCENES[i]; o = offs[i].getContext("2d"); seed = 97 + i * 1013;
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      offs[i].width = Math.ceil(w * dpr); offs[i].height = Math.ceil(h * dpr); o.setTransform(dpr, 0, 0, dpr, 0, 0); o.lineCap = "round";
+      const g = o.createLinearGradient(0, 0, 0, h); g.addColorStop(0, S.top); g.addColorStop(1, S.bottom);
       o.fillStyle = g; o.fillRect(0, 0, w, h);
-      // water surface: broken-colour dabs, palette drifting from sky light to green water
+      // water surface: broken-colour dabs drifting from sky light through reflections to water
       const N = Math.floor(w * h / 60);
-      for (let i = 0; i < N; i++) {
-        const x = rnd() * w, y = rnd() * h, n = Math.min(0.999, Math.max(0, noise(x * 0.0018 + 3, y * 0.0045) * 0.8 + (y / h) * 0.35 - 0.05));
-        const pal = PAL[Math.floor(n * 4)];
-        dab(x, y, (noise(x * 0.01, y * 0.01) - 0.5) * 0.45, 10 + rnd() * 12, 3.5 + rnd() * 3.5, rgba(pal[Math.floor(rnd() * pal.length)], 0.24 + rnd() * 0.24));
+      for (let k = 0; k < N; k++) {
+        const x = rnd() * w, y = rnd() * h, n = noise(x * 0.0018 + 3 + i * 17, y * 0.0045) * 0.7 + (y / h) * 0.5 - 0.1;
+        const pal = rnd() < 0.12 ? S.light : n < 0.33 ? S.sky : n < 0.6 ? S.mid : S.water;
+        dab(x, y, (noise(x * 0.01, y * 0.01) - 0.5) * 0.45, 10 + rnd() * 12, 3.5 + rnd() * 3.5, rgba(pick(pal), 0.24 + rnd() * 0.24));
+      }
+      // "Impression, Sunrise": a low sun in the margin with its broken reflection on the water
+      if (S.sun) {
+        const margin = S.sun.side ? w - col1 : col0;
+        const sx = S.sun.side ? (margin > 160 ? col1 + margin / 2 : w * 0.9) : (margin > 160 ? col0 / 2 : w * 0.1), sy = h * S.sun.y;
+        const glow = o.createRadialGradient(sx, sy, 0, sx, sy, 120); glow.addColorStop(0, rgba(S.sun.col, 0.28)); glow.addColorStop(1, rgba(S.sun.col, 0));
+        o.fillStyle = glow; o.fillRect(sx - 120, sy - 120, 240, 240);
+        for (let k = 0; k < 70; k++) { const a = rnd() * 6.283, r = Math.sqrt(rnd()) * 17; dab(sx + Math.cos(a) * r, sy + Math.sin(a) * r, (rnd() - 0.5) * 0.3, 7, 3.6, rgba(S.sun.col, 0.7)); }
+        for (let dy = 34; dy < h * 0.42; dy += 7) {
+          const spread = 8 + dy * 0.12, fade = 1 - dy / (h * 0.42);
+          for (let q = 0; q < 2; q++) dab(sx + (rnd() - 0.5) * spread * 2, sy + dy, (rnd() - 0.5) * 0.1, 10 + rnd() * 14 * fade, 3.2, rgba(S.sun.col, 0.55 * fade));
+        }
       }
       motifs.forEach(m => {
         // links: coloured reflections with white highlights; unsupported links broken and red
         m.edges.forEach((p, k) => {
           const isBad = k === m.bad;
-          for (let s = 0; s < 40; s++) {
+          for (let s = 0; s < 42; s++) {
             if (isBad && s % 3 === 2) continue;
-            const [x, y] = bez(p, s / 40);
-            dab(x + (rnd() - 0.5) * 3, y + (rnd() - 0.5) * 4, (rnd() - 0.5) * 0.2, 9 + rnd() * 6, 2.4, isBad ? rgba(BAD, 0.42 * m.f) : tint(m.col, 0.35 + rnd() * 0.2, 0.5 * m.f));
+            const [x, y] = bez(p, s / 42);
+            dab(x + (rnd() - 0.5) * 3, y + (rnd() - 0.5) * 4, (rnd() - 0.5) * 0.2, 9 + rnd() * 6, 2.6, isBad ? rgba(BAD, 0.45 * m.f) : tint(m.col, 0.3 + rnd() * 0.2, 0.55 * m.f));
             if (!isBad && s % 4 === 0) dab(x, y - 4, 0, 6, 1.8, rgba("#FFFFFF", 0.7 * m.f));
           }
         });
-        // nodes: lily pads, with a flower on actions, a ring on observations, an X on a stop
+        // nodes: lily pads (with the classic notch), a flower on actions, a ring on observations, an X on a stop
         m.pts.forEach(([x, y, k]) => {
-          for (let q = 0; q < 46; q++) {
-            const a = rnd() * 6.283, r = Math.sqrt(rnd());
-            dab(x + Math.cos(a) * r * 24, y + Math.sin(a) * r * 11, (rnd() - 0.5) * 0.6, 8, 3.6, rgba(PAD[Math.floor(rnd() * PAD.length)], 0.6 * m.f));
+          const notch = rnd() * 6.283;
+          for (let q = 0; q < 60; q++) {
+            const a = rnd() * 6.283; let d = Math.abs(((a - notch + 9.425) % 6.283) - 3.1416); if (d < 0.32) continue;
+            const r = Math.sqrt(rnd());
+            dab(x + Math.cos(a) * r * 28, y + Math.sin(a) * r * 12, (rnd() - 0.5) * 0.6, 8, 3.8, rgba(pick(PAD), 0.62 * m.f));
           }
           if (k === "a") {
-            for (let q = 0; q < 9; q++) { const a = q / 9 * 6.283; dab(x + Math.cos(a) * 4.5, y - 3 + Math.sin(a) * 3, a, 6, 3, tint(m.col, 0.25, 0.85 * m.f)); }
-            o.fillStyle = rgba("#F3DE8A", 0.95 * m.f); o.beginPath(); o.arc(x, y - 3, 2.4, 0, 7); o.fill();
+            for (let q = 0; q < 10; q++) { const a = q / 10 * 6.283; dab(x + Math.cos(a) * 5.5, y - 4 + Math.sin(a) * 3.6, a, 7, 3.4, tint(m.col, 0.22, 0.9 * m.f)); }
+            o.fillStyle = rgba("#F3DE8A", 0.95 * m.f); o.beginPath(); o.arc(x, y - 4, 2.8, 0, 7); o.fill();
           } else if (k === "x") {
-            o.lineWidth = 2.2; o.strokeStyle = rgba(m.col, 0.75 * m.f); o.beginPath(); o.moveTo(x - 4, y - 4); o.lineTo(x + 4, y + 4); o.moveTo(x + 4, y - 4); o.lineTo(x - 4, y + 4); o.stroke();
+            o.lineWidth = 2.4; o.strokeStyle = rgba(m.col, 0.8 * m.f); o.beginPath(); o.moveTo(x - 5, y - 5); o.lineTo(x + 5, y + 5); o.moveTo(x + 5, y - 5); o.lineTo(x - 5, y + 5); o.stroke();
           } else {
-            o.lineWidth = 2; o.strokeStyle = rgba(m.col, 0.7 * m.f); o.beginPath(); o.ellipse(x, y, 6, 3.5, 0, 0, 7); o.stroke();
+            o.lineWidth = 2.2; o.strokeStyle = rgba(m.col, 0.75 * m.f); o.beginPath(); o.ellipse(x, y, 7, 4, 0, 0, 7); o.stroke();
           }
         });
       });
+      // calm band behind the content column so body text never sits on busy strokes
+      const fx = v => Math.min(1, Math.max(0, v / w));
+      const band = o.createLinearGradient(0, 0, w, 0);
+      band.addColorStop(0, "rgba(244,245,247,0)");
+      band.addColorStop(fx(col0 - 150), "rgba(244,245,247,0)");
+      band.addColorStop(fx(col0 + 30), "rgba(244,245,247,0.8)");
+      band.addColorStop(fx(col1 - 30), "rgba(244,245,247,0.8)");
+      band.addColorStop(fx(col1 + 150), "rgba(244,245,247,0)");
+      band.addColorStop(1, "rgba(244,245,247,0)");
+      o.fillStyle = band; o.fillRect(0, 0, w, h);
+      ready[i] = true;
+    }
+
+    function blend() {
+      // scroll progress picks the time of day: dawn at the title, daylight mid-page, dusk at the end
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const p = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+      const a = p < 0.5 ? 0 : 1, t = sm(p < 0.5 ? p / 0.5 : (p - 0.5) / 0.5);
+      return ready[a] && ready[a + 1] ? [a, a + 1, t] : [1, 1, 0];
     }
 
     function frame(time) {
-      ctx.globalAlpha = 1; ctx.drawImage(off, 0, 0, w, h);
-      if (time != null) motifs.forEach(m => {
-        const good = m.edges.filter((p, k) => k !== m.bad); if (!good.length) return;
-        const t = ((time * m.speed + m.phase) % 1) * good.length, [x, y] = bez(good[Math.floor(t)], t % 1);
-        ctx.globalAlpha = 0.85 * m.f; ctx.fillStyle = "#FFFFFF";
-        ctx.beginPath(); ctx.ellipse(x, y, 5, 2, 0, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
-      });
-      // keep the reading column calm
-      const g = ctx.createRadialGradient(w / 2, h * 0.48, 0, w / 2, h * 0.48, Math.max(w, h) * 0.62);
-      g.addColorStop(0, "rgba(244,245,247,0.86)"); g.addColorStop(0.5, "rgba(244,245,247,0.4)"); g.addColorStop(1, "rgba(244,245,247,0)");
-      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+      const [a, b, t] = blend();
+      ctx.globalAlpha = 1; ctx.drawImage(offs[a], 0, 0, w, h);
+      if (t > 0.002) { ctx.globalAlpha = t; ctx.drawImage(offs[b], 0, 0, w, h); }
+      if (time != null) {
+        ctx.fillStyle = "#FFFFFF";
+        motifs.forEach(m => {
+          const good = m.edges.filter((p, k) => k !== m.bad); if (!good.length) return;
+          const u = ((time * m.speed + m.phase) % 1) * good.length, [x, y] = bez(good[Math.floor(u)], u % 1);
+          ctx.globalAlpha = 0.85 * m.f; ctx.beginPath(); ctx.ellipse(x, y, 5, 2, 0, 0, 7); ctx.fill();
+        });
+      }
+      ctx.globalAlpha = 1;
     }
-    function loop(time) { frame(time); raf = (!still.matches && !document.hidden) ? requestAnimationFrame(loop) : 0; }
+    let last = 0;
+    function loop(time) {
+      if (time - last > 33) { frame(time); last = time; }          // ~30 fps is plenty for a slow glint
+      raf = (!still.matches && !document.hidden) ? requestAnimationFrame(loop) : 0;
+    }
     function kick() { if (still.matches) frame(null); else if (!raf) raf = requestAnimationFrame(loop); }
     function resize() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       w = window.innerWidth; h = window.innerHeight; if (!w || !h) return;
       c.width = w * dpr; c.height = h * dpr; c.style.width = w + "px"; c.style.height = h + "px";
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const od = Math.min(dpr, 1.5); off.width = Math.ceil(w * od); off.height = Math.ceil(h * od); o.setTransform(od, 0, 0, od, 0, 0); o.lineCap = "round";
-      layout(); seed = 97; bake();
+      col0 = (w - Math.min(w, 1120)) / 2; col1 = w - col0;
+      layout(); ready = [false, false, false];
+      // paint the scene for the current scroll position first, the others when the page is idle
+      const id = ++bakeId, max = document.documentElement.scrollHeight - h;
+      const first = max > 0 && window.scrollY / max > 0.75 ? 2 : window.scrollY / Math.max(1, max) > 0.25 ? 1 : 0;
+      bake(first); if (first !== 1) bake(1);
       frame(still.matches ? null : performance.now()); kick();
+      const later = (window.requestIdleCallback || (fn => setTimeout(fn, 200)));
+      [0, 1, 2].filter(i => !ready[i]).forEach(i => later(() => { if (id === bakeId) { bake(i); frame(still.matches ? null : performance.now()); } }));
     }
     let rt = 0;
     resize();
     window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(resize, 150); });
+    window.addEventListener("scroll", kick, { passive: true });
     document.addEventListener("visibilitychange", kick);
     still.addEventListener?.("change", kick);
   })();
