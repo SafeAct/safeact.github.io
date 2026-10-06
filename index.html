@@ -74,7 +74,7 @@ h3 { font-family: var(--f-display); font-weight: 600; font-size: 1.15rem; line-h
 .mark-row svg { width: clamp(3rem, 8vw, 5rem); height: auto; flex: none; }
 .wordmark {
   font-family: var(--f-display); font-weight: 800; letter-spacing: -.02em; line-height: 1;
-  font-size: clamp(2.8rem, 9.5vw, 6.2rem); margin: 0;
+  font-size: clamp(2.1rem, 9.5vw, 6.2rem); margin: 0;
 }
 .wordmark .b { color: var(--navy); }
 .subtitle { font-family: var(--f-display); font-weight: 600; font-size: clamp(1.15rem, 2.6vw, 1.6rem); color: var(--navy); line-height: 1.3; text-wrap: balance; }
@@ -201,10 +201,15 @@ svg .dot:hover { stroke-width: 3.5; }
 .car-arrows button:hover { border-color: var(--ink-2); }
 
 /* ---------- gallery ---------- */
-.gallery { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; }
-.thumb { padding: .6rem; display: flex; flex-direction: column; gap: .5rem; min-width: 0; }
-.thumb img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #fff; border-radius: 6px; display: block; }
-.thumb span { font-size: .82rem; color: var(--ink-2); line-height: 1.35; }
+.gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; align-items: start; }
+.thumb {
+  padding: .9rem; display: flex; flex-direction: column; gap: .6rem; min-width: 0; box-sizing: border-box;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(23, 33, 58, .04), 0 8px 24px -12px rgba(23, 33, 58, .10);
+}
+.thumb:hover { border-color: #C9CFDA; }
+.thumb img { width: 100%; height: auto; background: #fff; border-radius: 6px; display: block; }
+.thumb span { font-size: .86rem; color: var(--ink-2); line-height: 1.4; }
 .thumb b { font-family: var(--f-mono); font-size: .72rem; color: var(--muted); font-weight: 500; display: block; }
 
 /* ---------- trajectories ---------- */
@@ -290,7 +295,7 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
   .facts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .fact:nth-child(4) { border-left: 0; }
   .fact:nth-child(n+4) { border-top: 1px solid var(--line); }
-  .gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gallery { grid-template-columns: 1fr; }
   .pager { display: none; }
 }
 @media (max-width: 560px) {
@@ -390,8 +395,8 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
     <h2>A correct endpoint does not mean a supported action</h2>
     <p class="lede">An agent can call the right tool with the right arguments, get a success response and reach the intended final state, without ever establishing the evidence that justified acting. We check the observable path from evidence to action, not only the endpoint.</p>
     <figure class="card fig">
-      <button class="fig-btn" type="button" data-full="static/images/fig1_evidence_to_action.png" data-cap="Figure 1. Endpoint correctness does not guarantee a valid evidence-to-action trace.">
-        <img src="static/images/fig1_evidence_to_action.png" alt="Figure 1: a valid path refunds C2 after reading C2; the observed trajectory reads C1 and refunds C2. The endpoint is satisfied and the refund is permitted, but the observed evidence before the refund is unsupported." width="2400" height="1157">
+      <button class="fig-btn" type="button" data-full="static/images/fig1_evidence_to_action.png" data-cap="Endpoint correctness does not guarantee a valid evidence-to-action trace.">
+        <img src="static/images/fig1_evidence_to_action.png" alt="A valid path refunds C2 after reading C2; the observed trajectory reads C1 and refunds C2. The endpoint is satisfied and the refund is permitted, but the observed evidence before the refund is unsupported." width="2400" height="1157">
       </button>
       <figcaption><b>Endpoint correctness does not guarantee a valid evidence-to-action trace.</b> An action may be permitted and succeed with the correct arguments, yet remain unsupported if required evidence was not established before execution. Missing support can propagate to downstream actions.</figcaption>
     </figure>
@@ -410,8 +415,8 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
     <h2>Six scenes, one isolated episode, five protocols</h2>
     <p class="lede">The agent sees only the public task and tool schemas. Evidence requirements, expected actions and dependencies stay with a hidden evaluator, which replays the trajectory deterministically. No LLM judge, no inspection of hidden reasoning.</p>
     <figure class="card fig">
-      <button class="fig-btn" type="button" data-full="static/images/fig2_overview.png" data-cap="Figure 2. Overview of SafeActBench.">
-        <img src="static/images/fig2_overview.png" alt="Figure 2: six scenes (customer and policy, operations and code, legal and finance, research, smart home, healthcare operations); one isolated episode with public task, tool-using agent, business records and a hidden deterministic evaluator; five task protocols Legacy, V0, V1, V2, V3." width="2400" height="1094" loading="lazy">
+      <button class="fig-btn" type="button" data-full="static/images/fig2_overview.png" data-cap="Overview of SafeActBench.">
+        <img src="static/images/fig2_overview.png" alt="Six scenes (customer and policy, operations and code, legal and finance, research, smart home, healthcare operations); one isolated episode with public task, tool-using agent, business records and a hidden deterministic evaluator; five task protocols Legacy, V0, V1, V2, V3." width="2400" height="1094" loading="lazy">
       </button>
       <figcaption><b>Overview of SafeActBench.</b> A static decision setting and four interactive regimes span investigated non-action to dependency-constrained execution. A provenance-bound Evidence Ledger and deterministic evaluator verify required evidence, exact actions and dependencies.</figcaption>
     </figure>
@@ -514,8 +519,8 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
               <li>Multi-action workflows add unresolved prerequisites and partial execution.</li>
             </ul>
           </div>
-          <button class="fig-btn" type="button" data-full="static/images/fig5_failure_modes.png" data-cap="Figure 5. Failure modes across SafeActBench protocols.">
-            <img src="static/images/fig5_failure_modes.png" alt="Figure 5: failure modes across protocols for each model-harness configuration" loading="lazy" width="2400" height="1867">
+          <button class="fig-btn" type="button" data-full="static/images/fig5_failure_modes.png" data-cap="Failure modes across SafeActBench protocols.">
+            <img src="static/images/fig5_failure_modes.png" alt="Failure modes across protocols for each model-harness configuration" loading="lazy" width="2400" height="1867">
           </button>
         </article>
         <article class="slide" data-name="Withheld evidence" hidden>
@@ -529,8 +534,8 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
               <li>65 of 66 Withheld episodes with an action had called the affected tool.</li>
             </ul>
           </div>
-          <button class="fig-btn" type="button" data-full="static/images/fig3_evidence_sensitivity.png" data-cap="Figure 3. Evidence sensitivity under controlled interventions.">
-            <img src="static/images/fig3_evidence_sensitivity.png" alt="Figure 3: action probability under Original, Withheld and Contradicted conditions, and paired reductions" loading="lazy" width="2400" height="794">
+          <button class="fig-btn" type="button" data-full="static/images/fig3_evidence_sensitivity.png" data-cap="Evidence sensitivity under controlled interventions.">
+            <img src="static/images/fig3_evidence_sensitivity.png" alt="Action probability under Original, Withheld and Contradicted conditions, and paired reductions" loading="lazy" width="2400" height="794">
           </button>
         </article>
         <article class="slide" data-name="Requester claims" hidden>
@@ -544,8 +549,8 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
               <li>Generic urgency and explicit warnings do not reliably change action.</li>
             </ul>
           </div>
-          <button class="fig-btn" type="button" data-full="static/images/fig4_mechanism_probes.png" data-cap="Figure 4. Mechanism probes under missing evidence.">
-            <img src="static/images/fig4_mechanism_probes.png" alt="Figure 4: action probability under Withheld, evidence package and requester claim; paired probe effects; retrieval with distractors" loading="lazy" width="2400" height="811">
+          <button class="fig-btn" type="button" data-full="static/images/fig4_mechanism_probes.png" data-cap="Mechanism probes under missing evidence.">
+            <img src="static/images/fig4_mechanism_probes.png" alt="Action probability under Withheld, evidence package and requester claim; paired probe effects; retrieval with distractors" loading="lazy" width="2400" height="811">
           </button>
         </article>
         <article class="slide" data-name="Harness effects" hidden>
@@ -595,17 +600,17 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
     </div>
     <h3 style="margin-top: .6rem">More from the appendix</h3>
     <div class="gallery">
-      <button class="fig-btn card thumb" type="button" data-full="static/images/fig6_interventions_expanded.png" data-cap="Figure 6. Additional evidence-intervention results.">
-        <img src="static/images/fig6_interventions_expanded.png" alt="" loading="lazy" width="2400" height="1702"><span><b>Figure 6</b>How paired decisions change under withholding and contradiction</span>
+      <button class="fig-btn card thumb" type="button" data-full="static/images/fig6_interventions_expanded.png" data-cap="Additional evidence-intervention results.">
+        <img src="static/images/fig6_interventions_expanded.png" alt="" loading="lazy" width="2400" height="1702"><span>How paired decisions change under withholding and contradiction</span>
       </button>
-      <button class="fig-btn card thumb" type="button" data-full="static/images/fig7_investigation_readiness.png" data-cap="Figure 7. Investigation effort and decision readiness across five models.">
-        <img src="static/images/fig7_investigation_readiness.png" alt="" loading="lazy" width="2400" height="1257"><span><b>Figure 7</b>Investigation effort and decision readiness</span>
+      <button class="fig-btn card thumb" type="button" data-full="static/images/fig7_investigation_readiness.png" data-cap="Investigation effort and decision readiness across five models.">
+        <img src="static/images/fig7_investigation_readiness.png" alt="" loading="lazy" width="2400" height="1257"><span>Investigation effort and decision readiness</span>
       </button>
-      <button class="fig-btn card thumb" type="button" data-full="static/images/fig8_action_timing.png" data-cap="Figure 8. First-action timing under additional interventions.">
-        <img src="static/images/fig8_action_timing.png" alt="" loading="lazy" width="2400" height="1559"><span><b>Figure 8</b>First-action timing under interventions</span>
+      <button class="fig-btn card thumb" type="button" data-full="static/images/fig8_action_timing.png" data-cap="First-action timing under additional interventions.">
+        <img src="static/images/fig8_action_timing.png" alt="" loading="lazy" width="2400" height="1559"><span>First-action timing under interventions</span>
       </button>
-      <button class="fig-btn card thumb" type="button" data-full="static/images/fig10_harness_sensitivity.png" data-cap="Figure 10. Evidence sensitivity across native and Inspect harnesses.">
-        <img src="static/images/fig10_harness_sensitivity.png" alt="" loading="lazy" width="2400" height="1745"><span><b>Figure 10</b>Evidence sensitivity across harnesses</span>
+      <button class="fig-btn card thumb" type="button" data-full="static/images/fig10_harness_sensitivity.png" data-cap="Evidence sensitivity across native and Inspect harnesses.">
+        <img src="static/images/fig10_harness_sensitivity.png" alt="" loading="lazy" width="2400" height="1745"><span>Evidence sensitivity across harnesses</span>
       </button>
     </div>
   </div>
