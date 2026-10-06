@@ -992,12 +992,12 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
       const g = o.createLinearGradient(0, 0, 0, h);
       g.addColorStop(0, "#E9EEF7"); g.addColorStop(0.6, "#F1F3F7"); g.addColorStop(1, "#F5F1E4");
       o.fillStyle = g; o.fillRect(0, 0, w, h);
-      const DEEP = ["#5D7DBF", "#6F8FCB", "#4F6FB3"], LIGHT = ["#9DB4DE", "#B8CAEA", "#8FB8C9", "#A9CFC8"], WARM = ["#E5C55A", "#EDD88E", "#F3E7B9", "#FFFFFF"];
-      const N = Math.floor(w * h / 120);
+      const DEEP = ["#3F63B5", "#5577C4", "#2F56A8"], LIGHT = ["#86A6DC", "#A6BEE6", "#7FB0C6", "#9CCBC0"], WARM = ["#E8C24A", "#F0D57A", "#F6E7A8", "#FFFFFF"];
+      const N = Math.floor(w * h / 95);
       for (let i = 0; i < N; i++) {
         const x = rnd() * w, y = rnd() * h, n = noise(x * 0.004, y * 0.004);
         const pal = n < 0.32 ? DEEP : n < 0.66 ? LIGHT : WARM;
-        stroke(x, y, 4 + Math.floor(rnd() * 5), 3, 1.8 + rnd() * 2, rgba(pal[Math.floor(rnd() * pal.length)], 0.12 + rnd() * 0.14));
+        stroke(x, y, 6 + Math.floor(rnd() * 6), 3, 2.2 + rnd() * 2.6, rgba(pal[Math.floor(rnd() * pal.length)], 0.16 + rnd() * 0.18));
       }
       motifs.forEach(m => {
         m.edges.forEach((p, k) => {
@@ -1028,14 +1028,14 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
       const g = o.createLinearGradient(0, 0, 0, h);
       g.addColorStop(0, "#EFEDF6"); g.addColorStop(0.5, "#F2F4F6"); g.addColorStop(1, "#E9F2EF");
       o.fillStyle = g; o.fillRect(0, 0, w, h);
-      const PAL = [["#C9BEE3", "#D8CFEE", "#BFD3EE"], ["#B8DDD5", "#CDE6E0", "#D6E4C6"], ["#EBC3C8", "#F1D6D2", "#EFD9A6"], ["#FFFFFF", "#F6F1E6", "#E3EAF5"]];
-      const N = Math.floor(w * h / 70);
+      const PAL = [["#B3A3DA", "#C6B9E6", "#9FBBE6"], ["#8FCDC0", "#B2DDD2", "#B9D7A6"], ["#E6A7B2", "#EEC2BE", "#EBCB86"], ["#FFFFFF", "#F7EFDD", "#D5E2F4"]];
+      const N = Math.floor(w * h / 60);
       for (let i = 0; i < N; i++) {
-        const x = rnd() * w, y = rnd() * h, n = noise(x * 0.003 + 3, y * 0.006);
+        const x = rnd() * w, y = rnd() * h, n = Math.min(0.999, Math.max(0, noise(x * 0.0018 + 3, y * 0.0045) * 0.8 + (y / h) * 0.35 - 0.05));
         const pal = PAL[Math.min(3, Math.floor(n * 4))];
-        dab(x, y, (noise(x * 0.01, y * 0.01) - 0.5) * 0.5, 7 + rnd() * 9, 2.6 + rnd() * 2.6, rgba(pal[Math.floor(rnd() * pal.length)], 0.2 + rnd() * 0.22));
+        dab(x, y, (noise(x * 0.01, y * 0.01) - 0.5) * 0.45, 10 + rnd() * 12, 3.5 + rnd() * 3.5, rgba(pal[Math.floor(rnd() * pal.length)], 0.24 + rnd() * 0.24));
       }
-      const PAD = ["#8DB79A", "#A5C9A8", "#7FAE96", "#B5D3B2"];
+      const PAD = ["#6FA584", "#8DBE93", "#5E9A7C", "#A3CB9C"];
       motifs.forEach(m => {
         m.edges.forEach((p, k) => {
           const isBad = k === m.bad;
@@ -1049,7 +1049,7 @@ dialog#lightbox .close { position: absolute; top: .5rem; right: .5rem; }
         m.pts.forEach(([x, y, k]) => {
           for (let q = 0; q < 46; q++) {
             const a = rnd() * 6.283, r = Math.sqrt(rnd());
-            dab(x + Math.cos(a) * r * 19, y + Math.sin(a) * r * 9, (rnd() - 0.5) * 0.6, 6, 3, rgba(PAD[Math.floor(rnd() * PAD.length)], 0.55 * m.f));
+            dab(x + Math.cos(a) * r * 24, y + Math.sin(a) * r * 11, (rnd() - 0.5) * 0.6, 8, 3.6, rgba(PAD[Math.floor(rnd() * PAD.length)], 0.6 * m.f));
           }
           if (k === "a") {
             for (let q = 0; q < 9; q++) { const a = q / 9 * 6.283; dab(x + Math.cos(a) * 4.5, y - 3 + Math.sin(a) * 3, a, 6, 3, tint(m.col, 0.25, 0.85 * m.f)); }
